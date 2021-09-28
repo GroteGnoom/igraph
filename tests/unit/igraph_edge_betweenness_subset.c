@@ -54,7 +54,8 @@ void test_bug950_edge() {
         /* directed = */ IGRAPH_UNDIRECTED,
         /* sources = */ igraph_vss_all(),
         /* target = */ igraph_vss_all(),
-        /* weights=   */ &weights);
+        /* weights=   */ &weights,
+        /* normalized=*/ 0);
 
     print_vector(&eb);
     igraph_vector_destroy(&eb);
@@ -109,7 +110,8 @@ int main() {
         /* directed = */ IGRAPH_UNDIRECTED,
         /* sources =  */ vs_source,
         /* target =   */ vs_target,
-        /* weights=   */ NULL
+        /* weights=   */ NULL,
+        /* normalized=*/ 0
     );
 
     printf("Max edge betweenness: %f\n", igraph_vector_max(&bet));
@@ -167,7 +169,8 @@ int main() {
         /* directed = */ IGRAPH_UNDIRECTED,
         /* sources = */ vs_source,
         /* target = */ vs_target,
-        /* weights=   */ &weights
+        /* weights=   */ &weights,
+        /* normalized=*/ 0
     );
 
     IGRAPH_ASSERT(igraph_vector_all_e(&bet, &bet2));
@@ -194,7 +197,8 @@ int main() {
     /* directed = */ IGRAPH_UNDIRECTED,
     /* sources = */ vs_source,
     /* target = */ vs_target,
-    /* weights=   */ NULL);
+    /* weights=   */ NULL,
+    /* normalized=*/ 0);
 
     print_vector(&eb);
     igraph_vector_destroy(&eb);
@@ -220,7 +224,8 @@ int main() {
         /* directed = */ IGRAPH_UNDIRECTED,
         /* sources = */ igraph_vss_all(),
         /* target = */ vs_target,
-        /* weights=   */ NULL);
+        /* weights=   */ NULL,
+        /* normalized=*/ 0);
 
     print_vector(&eb);
     igraph_vector_destroy(&eb);
@@ -245,7 +250,8 @@ int main() {
         /* directed = */ IGRAPH_UNDIRECTED,
         /* sources = */ vs_source,
         /* target = */ igraph_vss_all(),
-        /* weights=   */ NULL);
+        /* weights=   */ NULL,
+        /* normalized=*/ 0);
     print_vector(&eb);
     igraph_vector_destroy(&eb);
     igraph_vs_destroy(&vs_source);
@@ -265,7 +271,8 @@ int main() {
         /* directed = */ IGRAPH_UNDIRECTED,
         /* sources = */ igraph_vss_all(),
         /* target = */ igraph_vss_all(),
-        /* weights=   */ NULL);
+        /* weights=   */ NULL,
+        /* normalized=*/ 0);
     print_vector(&bet);
     igraph_vector_destroy(&bet);
 
@@ -297,7 +304,8 @@ int main() {
         /* directed = */ IGRAPH_UNDIRECTED,
         /* sources = */ vs_source,
         /* target = */ vs_target,
-        /* weights=   */ NULL);
+        /* weights=   */ NULL,
+        /* normalized=*/ 0);
         printf("Max edge betweenness: %f\n", igraph_vector_max(&bet));
 
         igraph_vector_destroy(&bet);

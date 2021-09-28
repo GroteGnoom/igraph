@@ -68,7 +68,8 @@ int main() {
         /* directed = */ IGRAPH_UNDIRECTED,
         /* sources = */ vs_source,
         /* target = */ vs_target,
-        /* weights=   */ NULL);
+        /* weights=   */ NULL,
+        /* normalized= */ 0);
 
     igraph_vector_destroy(&bet);
     igraph_vs_destroy(&vs_source);
@@ -109,7 +110,8 @@ int main() {
         /* directed = */ IGRAPH_UNDIRECTED,
         /* sources =  */ vs_source,
         /* target =   */ vs_target,
-        /* weights=   */ NULL
+        /* weights=   */ NULL,
+        /* normalized=*/ 0
     );
 
     printf("Max betweenness: %f\n", igraph_vector_max(&bet));
@@ -164,7 +166,8 @@ int main() {
             /* directed = */ IGRAPH_UNDIRECTED,
             /* sources = */ vs_source,
             /* target = */ vs_target,
-            /* weights=   */ &weights);
+            /* weights=   */ &weights,
+            /* normalized=*/ 0);
 
     IGRAPH_ASSERT(igraph_vector_all_e(&bet, &bet2));
 
@@ -189,7 +192,8 @@ int main() {
         /* directed = */ IGRAPH_UNDIRECTED,
         /* sources = */ igraph_vss_all(),
         /* target = */ igraph_vss_all(),
-        /* weights=   */ &weights);
+        /* weights=   */ &weights,
+        /* normalized=*/ 0);
 
     print_vector(&bet);
 
@@ -224,7 +228,8 @@ int main() {
             /* directed = */ IGRAPH_UNDIRECTED,
             /* sources = */ vs_source,
             /* target = */ igraph_vss_all(),
-            /* weights=   */ NULL);
+            /* weights=   */ NULL,
+            /* normalized=*/ 0);
         print_vector(&bet);
 
         printf("Weighted\n");
@@ -234,11 +239,24 @@ int main() {
             /* directed = */ IGRAPH_UNDIRECTED,
             /* sources = */ vs_source,
             /* target = */ igraph_vss_all(),
-            /* weights */ &weights);
+            /* weights */ &weights,
+            /* normalized=*/ 0);
         print_vector(&bet2);
-        printf("\n");
 
         IGRAPH_ASSERT(igraph_vector_all_e(&bet, &bet2));
+
+        printf("Unweighted, normalized:\n");
+        igraph_betweenness_subset(/* graph=     */ &g,
+            /* res=       */ &bet,
+            /* vids=      */ vs,
+            /* directed = */ IGRAPH_UNDIRECTED,
+            /* sources = */ vs_source,
+            /* target = */ igraph_vss_all(),
+            /* weights=   */ NULL,
+            /* normalized=*/ 1);
+        print_vector(&bet);
+        printf("\n");
+
         igraph_vs_destroy(&vs);
         igraph_vector_int_destroy(&node_vec);
         igraph_vs_destroy(&vs_source);
@@ -278,7 +296,8 @@ int main() {
             /* directed = */ 0,
             /* sources = */ igraph_vss_all(),
             /* target = */ vs_target,
-            /* weights */ NULL);
+            /* weights */ NULL,
+            /* normalized=*/ 0);
         print_vector(&bet);
 
         printf("Weighted\n");
@@ -288,7 +307,8 @@ int main() {
             /* directed = */ 0,
             /* sources = */ igraph_vss_all(),
             /* target = */ vs_target,
-            /* weights */ &weights);
+            /* weights */ &weights,
+            /* normalized=*/ 0);
         print_vector(&bet2);
         printf("\n");
 
@@ -311,7 +331,8 @@ int main() {
         /* directed = */ IGRAPH_UNDIRECTED,
         /* sources = */ igraph_vss_all(),
         /* target = */ igraph_vss_all(),
-        /* weights=   */ NULL);
+        /* weights=   */ NULL,
+        /* normalized=*/ 0);
 
     print_vector(&bet);
 
@@ -344,7 +365,8 @@ int main() {
         /* directed = */ IGRAPH_UNDIRECTED,
         /* sources = */ vs_source,
         /* target = */ vs_target,
-        /* weights=   */ NULL);;
+        /* weights=   */ NULL,
+        /* normalized=*/ 0);
         printf("Max betweenness: %f\n", igraph_vector_max(&bet));
 
         igraph_vector_destroy(&bet);

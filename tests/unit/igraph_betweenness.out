@@ -1,6 +1,3 @@
-BA graph
-==========================================================
-
 Tree
 ==========================================================
 Max betweenness: 1155.000000
@@ -25,11 +22,15 @@ Single path graph cutoff
 Cutoff -1
 Unweighted
 ( 0 3 4 3 0 )
+Unweighted, normalized
+( 0 0.25 0.333333 0.25 0 )
 Weighted
 ( 0 3 4 3 0 )
 
 Cutoff 0
 Unweighted
+( 0 0 0 0 0 )
+Unweighted, normalized
 ( 0 0 0 0 0 )
 Weighted
 ( 0 0 0 0 0 )
@@ -37,24 +38,32 @@ Weighted
 Cutoff 1
 Unweighted
 ( 0 0 0 0 0 )
+Unweighted, normalized
+( 0 0 0 0 0 )
 Weighted
 ( 0 0 0 0 0 )
 
 Cutoff 2
 Unweighted
 ( 0 1 1 1 0 )
+Unweighted, normalized
+( 0 0.0833333 0.0833333 0.0833333 0 )
 Weighted
 ( 0 1 1 1 0 )
 
 Cutoff 3
 Unweighted
 ( 0 2 3 2 0 )
+Unweighted, normalized
+( 0 0.166667 0.25 0.166667 0 )
 Weighted
 ( 0 2 3 2 0 )
 
 Cutoff 4
 Unweighted
 ( 0 3 4 3 0 )
+Unweighted, normalized
+( 0 0.25 0.333333 0.25 0 )
 Weighted
 ( 0 3 4 3 0 )
 

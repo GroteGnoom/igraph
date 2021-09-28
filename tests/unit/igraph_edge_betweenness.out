@@ -21,6 +21,8 @@ Small undirected graph 2, unweighted, cutoff=2
 
 Small undirected graph 3, unweighted, with multiple and loop edges
 ( 2 1.16667 1.16667 0 2 1.66667 0 )
+Normalized:
+( 0.166667 0.0972222 0.0972222 0 0.166667 0.138889 0 )
 
 Testing bug 950, tolerances
 ( 0 0 2.33333 2.33333 2.33333 0 2.33333 2.33333 2.33333 2.33333 2.33333 2.33333 0 0 0 )

@@ -470,6 +470,9 @@ static igraph_error_t igraph_i_betweenness_check_weights(
  * \param weights An optional vector containing edge weights for
  *        calculating weighted betweenness. No edge weight may be NaN.
  *        Supply a null pointer here for unweighted betweenness.
+ * \param normalized A boolean indicating wheter to divide by the
+ *        maximum possible betweenness, which is <code>(V-1)(V-2)/2</code>,
+ *        where V is the number of vertices in \p graph.
  * \return Error code:
  *        \c IGRAPH_ENOMEM, not enough memory for
  *        temporary data.
@@ -490,8 +493,8 @@ static igraph_error_t igraph_i_betweenness_check_weights(
  */
 igraph_error_t igraph_betweenness(const igraph_t *graph, igraph_vector_t *res,
                        const igraph_vs_t vids, igraph_bool_t directed,
-                       const igraph_vector_t* weights) {
-    return igraph_betweenness_cutoff(graph, res, vids, directed, weights, -1);
+                       const igraph_vector_t* weights, igraph_bool_t normalized) {
+    return igraph_betweenness_cutoff(graph, res, vids, directed, weights, -1, normalized);
 }
 
 /**
@@ -516,6 +519,9 @@ igraph_error_t igraph_betweenness(const igraph_t *graph, igraph_vector_t *res,
  * \param cutoff The maximal length of paths that will be considered.
  *        If negative, the exact betweenness will be calculated, and
  *        there will be no upper limit on path lengths.
+ * \param normalized A boolean indicating wheter to divide by the
+ *        maximum possible betweenness, which is <code>(V-1)(V-2)/2</code>,
+ *        where V is the number of vertices in \p graph.
  * \return Error code:
  *        \c IGRAPH_ENOMEM, not enough memory for
  *        temporary data.
@@ -535,7 +541,8 @@ igraph_error_t igraph_betweenness(const igraph_t *graph, igraph_vector_t *res,
  */
 igraph_error_t igraph_betweenness_cutoff(const igraph_t *graph, igraph_vector_t *res,
                               const igraph_vs_t vids, igraph_bool_t directed,
-                              const igraph_vector_t *weights, igraph_real_t cutoff) {
+                              const igraph_vector_t *weights, igraph_real_t cutoff,
+                              igraph_bool_t normalized) {
 
     igraph_integer_t no_of_nodes = igraph_vcount(graph);
     igraph_integer_t no_of_edges = igraph_ecount(graph);
@@ -664,8 +671,15 @@ igraph_error_t igraph_betweenness_cutoff(const igraph_t *graph, igraph_vector_t 
         IGRAPH_FINALLY_CLEAN(2);
     }
 
-    if (!directed || !igraph_is_directed(graph)) {
-        igraph_vector_scale(res, 0.5);
+    if (!directed || !igraph_is_directed(graph) || normalized) {
+        igraph_real_t scale =  1.0;
+        if (!directed || !igraph_is_directed(graph)) {
+            scale /= 2.0;
+        }
+        if (normalized) {
+            scale /= (no_of_nodes - 1.0) * (no_of_nodes - 2.0);
+        }
+        igraph_vector_scale(res, scale);
     }
 
     IGRAPH_PROGRESS("Betweenness centrality: ", 100.0, 0);
@@ -706,6 +720,10 @@ igraph_error_t igraph_betweenness_cutoff(const igraph_t *graph, igraph_vector_t 
  * \param weights An optional weight vector for weighted edge
  *        betweenness. No edge weight may be NaN. Supply a null
  *        pointer here for the unweighted version.
+ * \param normalized A boolean indicating wheter to divide by the
+ *        maximum possible edge betweenness, which is 
+ *        <code>V(V-1)/2</code>,
+ *        where V is the number of vertices in \p graph.
  * \return Error code:
  *        \c IGRAPH_ENOMEM, not enough memory for
  *        temporary data.
@@ -722,9 +740,9 @@ igraph_error_t igraph_betweenness_cutoff(const igraph_t *graph, igraph_vector_t 
  */
 int igraph_edge_betweenness(const igraph_t *graph, igraph_vector_t *result,
                             igraph_bool_t directed,
-                            const igraph_vector_t *weights) {
+                            const igraph_vector_t *weights, igraph_bool_t normalized) {
     return igraph_edge_betweenness_cutoff(graph, result, directed,
-                                          weights, -1);
+                                          weights, -1, normalized);
 }
 
 /**
@@ -749,6 +767,10 @@ int igraph_edge_betweenness(const igraph_t *graph, igraph_vector_t *result,
  * \param cutoff The maximal length of paths that will be considered.
  *        If negative, the exact betweenness will be calculated (no
  *        upper limit on path lengths).
+ * \param normalized A boolean indicating wheter to divide by the
+ *        maximum possible edge betweenness, which is 
+ *        <code>V(V-1)/2</code>,
+ *        where V is the number of vertices in \p graph.
  * \return Error code:
  *        \c IGRAPH_ENOMEM, not enough memory for
  *        temporary data.
@@ -763,7 +785,8 @@ int igraph_edge_betweenness(const igraph_t *graph, igraph_vector_t *result,
  */
 int igraph_edge_betweenness_cutoff(const igraph_t *graph, igraph_vector_t *result,
                                    igraph_bool_t directed,
-                                   const igraph_vector_t *weights, igraph_real_t cutoff) {
+                                   const igraph_vector_t *weights, igraph_real_t cutoff,
+                                   igraph_bool_t normalized) {
     igraph_integer_t no_of_nodes = igraph_vcount(graph);
     igraph_integer_t no_of_edges = igraph_ecount(graph);
     igraph_inclist_t inclist, fathers;
@@ -848,8 +871,15 @@ int igraph_edge_betweenness_cutoff(const igraph_t *graph, igraph_vector_t *resul
         }
     } /* source < no_of_nodes */
 
-    if (!directed || !igraph_is_directed(graph)) {
-        igraph_vector_scale(result, 0.5);
+    if (!directed || !igraph_is_directed(graph) || normalized) {
+        igraph_real_t scale =  1.0;
+        if (!directed || !igraph_is_directed(graph)) {
+            scale /= 2.0;
+        }
+        if (normalized) {
+            scale /= no_of_nodes * (no_of_nodes - 1.0);
+        }
+        igraph_vector_scale(result, scale);
     }
 
     IGRAPH_PROGRESS("Edge betweenness centrality: ", 100.0, 0);
@@ -863,6 +893,48 @@ int igraph_edge_betweenness_cutoff(const igraph_t *graph, igraph_vector_t *resul
     IGRAPH_FINALLY_CLEAN(6);
 
     return IGRAPH_SUCCESS;
+}
+
+static igraph_bool_t igraph_i_is_node_in_vit(igraph_integer_t node, igraph_vit_t vit) {
+    IGRAPH_VIT_RESET(vit);
+    for (igraph_integer_t j = 0; !IGRAPH_VIT_END(vit);
+            IGRAPH_VIT_NEXT(vit), j++) {
+        igraph_integer_t source = IGRAPH_VIT_GET(vit);
+        if (source == node) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+static igraph_integer_t igraph_i_intersection_size(igraph_vit_t vit1, igraph_vit_t vit2, igraph_integer_t exclude) {
+    igraph_integer_t intersection_size = 0;
+    IGRAPH_VIT_RESET(vit1);
+    for (igraph_integer_t j = 0; !IGRAPH_VIT_END(vit1);
+            IGRAPH_VIT_NEXT(vit1), j++) {
+        if (IGRAPH_VIT_GET(vit1) == exclude){
+            continue;
+        }
+        if (igraph_i_is_node_in_vit(IGRAPH_VIT_GET(vit1), vit2)) {
+            intersection_size++;
+        }
+    }
+    return intersection_size;
+}
+
+static igraph_real_t igraph_i_get_scale(igraph_bool_t directed,
+        igraph_integer_t sources, igraph_integer_t targets,
+        igraph_integer_t s_t_intersection_size) {
+    igraph_real_t scale;
+    if (!directed) {
+        scale = sources * targets -
+            s_t_intersection_size - (s_t_intersection_size * (s_t_intersection_size - 1.0) / 2.0);
+        scale = 1.0 / scale;
+    } else {
+        scale = 1.0 / (sources * targets -
+            s_t_intersection_size);
+    }
+    return scale;
 }
 
 /**
@@ -889,6 +961,8 @@ int igraph_edge_betweenness_cutoff(const igraph_t *graph, igraph_vector_t *resul
  *        into considuration in the betweenness calculation.
  * \param targets A vertex selector for the targets of the shortest paths taken
  *        into considuration in the betweenness calculation.
+ * \param normalized A boolean indicating wheter to divide by the
+ *        maximum possible subset-limited betweenness. 
  * \return Error code:
  *        \c IGRAPH_ENOMEM, not enough memory for temporary data.
  *        \c IGRAPH_EINVVID, invalid vertex ID passed in \p vids,
@@ -905,7 +979,7 @@ int igraph_edge_betweenness_cutoff(const igraph_t *graph, igraph_vector_t *resul
 int igraph_betweenness_subset(const igraph_t *graph, igraph_vector_t *res,
                               const igraph_vs_t vids, igraph_bool_t directed,
                               const igraph_vs_t sources, const igraph_vs_t targets,
-                              const igraph_vector_t *weights) {
+                              const igraph_vector_t *weights, igraph_bool_t normalized) {
 
     igraph_integer_t no_of_nodes = igraph_vcount(graph);
     igraph_integer_t no_of_edges = igraph_ecount(graph);
@@ -1055,25 +1129,63 @@ int igraph_betweenness_subset(const igraph_t *graph, igraph_vector_t *res,
     igraph_vit_destroy(&vit);
     IGRAPH_FINALLY_CLEAN(1);
 
-    /* Keep only the requested vertices */
-    if (!igraph_vs_is_all(&vids)) {
+    if (normalized || !igraph_vs_is_all(&vids) ) {
         IGRAPH_CHECK(igraph_vit_create(graph, vids, &vit));
         IGRAPH_FINALLY(igraph_vit_destroy, &vit);
 
         IGRAPH_CHECK(igraph_vector_resize(res, IGRAPH_VIT_SIZE(vit)));
-        for (j = 0, IGRAPH_VIT_RESET(vit); !IGRAPH_VIT_END(vit);
-             IGRAPH_VIT_NEXT(vit), j++) {
-            igraph_integer_t node = IGRAPH_VIT_GET(vit);
-            VECTOR(*res)[j] = VECTOR(*tmpres)[node];
+        if (normalized) {
+            igraph_real_t scale =  1.0;
+            igraph_integer_t no_of_targets;
+            igraph_vit_t s_vit;
+            igraph_vit_t t_vit;
+            IGRAPH_CHECK(igraph_vs_size(graph, &targets, &no_of_targets));
+            IGRAPH_CHECK(igraph_vit_create(graph, sources, &s_vit));
+            IGRAPH_CHECK(igraph_vit_create(graph, targets, &t_vit));
+            IGRAPH_FINALLY(igraph_vit_destroy, &s_vit);
+            IGRAPH_FINALLY(igraph_vit_destroy, &t_vit);
+            for (j = 0, IGRAPH_VIT_RESET(vit); !IGRAPH_VIT_END(vit);
+                    IGRAPH_VIT_NEXT(vit), j++) {
+                igraph_integer_t corrected_no_of_targets = no_of_targets;
+                igraph_integer_t corrected_no_of_sources = no_of_sources;
+                igraph_integer_t node = IGRAPH_VIT_GET(vit);
+                igraph_integer_t s_t_intersection_size = igraph_i_intersection_size(s_vit, t_vit, node);
+                if (igraph_i_is_node_in_vit(node, s_vit)) {
+                    corrected_no_of_sources--;
+                }
+                if (igraph_i_is_node_in_vit(node, t_vit)) {
+                    corrected_no_of_targets--;
+                }
+                scale = igraph_i_get_scale(directed && igraph_is_directed(graph),
+                        corrected_no_of_sources, corrected_no_of_targets,
+                        s_t_intersection_size);
+                if (igraph_vs_is_all(&vids)) {
+                    VECTOR(*res)[j] = VECTOR(*res)[node] * scale;
+                } else {
+                    VECTOR(*res)[j] = VECTOR(*tmpres)[node] * scale;
+                }
+            }
+            igraph_vit_destroy(&s_vit);
+            igraph_vit_destroy(&t_vit);
+            IGRAPH_FINALLY_CLEAN(2);
         }
-
+        else {
+            for (j = 0, IGRAPH_VIT_RESET(vit); !IGRAPH_VIT_END(vit);
+                    IGRAPH_VIT_NEXT(vit), j++) {
+                igraph_integer_t node = IGRAPH_VIT_GET(vit);
+                VECTOR(*res)[j] = VECTOR(*tmpres)[node];
+            }
+        }
         igraph_vit_destroy(&vit);
-        igraph_vector_destroy(tmpres);
-        IGRAPH_FINALLY_CLEAN(2);
+        IGRAPH_FINALLY_CLEAN(1);
+    }
+    if (!normalized && (!directed || !igraph_is_directed(graph))) {
+        igraph_vector_scale(res, 0.5);
     }
 
-   if (!directed || !igraph_is_directed(graph)) {
-        igraph_vector_scale(res, 0.5);
+    if (!igraph_vs_is_all(&vids)) {
+        igraph_vector_destroy(tmpres);
+        IGRAPH_FINALLY_CLEAN(1);
     }
 
     igraph_Free(is_target);
@@ -1130,7 +1242,7 @@ int igraph_betweenness_subset(const igraph_t *graph, igraph_vector_t *res,
 int igraph_edge_betweenness_subset(const igraph_t *graph, igraph_vector_t *res,
                                    const igraph_es_t eids, igraph_bool_t directed,
                                    const igraph_vs_t sources, const igraph_vs_t targets,
-                                   const igraph_vector_t *weights) {
+                                   const igraph_vector_t *weights, igraph_bool_t normalized) {
     igraph_integer_t no_of_nodes = igraph_vcount(graph);
     igraph_integer_t no_of_edges = igraph_ecount(graph);
     igraph_integer_t no_of_sources;

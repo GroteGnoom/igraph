@@ -298,7 +298,8 @@ igraph_error_t igraph_centralization_betweenness(const igraph_t *graph,
         IGRAPH_VECTOR_INIT_FINALLY(scores, 0);
     }
 
-    IGRAPH_CHECK(igraph_betweenness(graph, scores, igraph_vss_all(), directed, /*weights=*/ 0));
+    IGRAPH_CHECK(igraph_betweenness(graph, scores, igraph_vss_all(), directed, /*weights=*/ 0,
+                /* normalized */ 0));
 
     IGRAPH_CHECK(igraph_centralization_betweenness_tmax(graph, 0, directed, tmax));
 

@@ -60,24 +60,29 @@ IGRAPH_EXPORT igraph_error_t igraph_harmonic_centrality_cutoff(const igraph_t *g
 
 IGRAPH_EXPORT igraph_error_t igraph_betweenness(const igraph_t *graph, igraph_vector_t *res,
                                      const igraph_vs_t vids, igraph_bool_t directed,
-                                     const igraph_vector_t *weights);
+                                     const igraph_vector_t *weights, igraph_bool_t normalized);
 IGRAPH_EXPORT igraph_error_t igraph_betweenness_cutoff(const igraph_t *graph, igraph_vector_t *res,
                                             const igraph_vs_t vids, igraph_bool_t directed,
-                                            const igraph_vector_t *weights, igraph_real_t cutoff);
+                                            const igraph_vector_t *weights, igraph_real_t cutoff,
+                                            igraph_bool_t normalized);
 IGRAPH_EXPORT igraph_error_t igraph_edge_betweenness(const igraph_t *graph, igraph_vector_t *result,
                                           igraph_bool_t directed,
-                                          const igraph_vector_t *weigths);
+                                          const igraph_vector_t *weigths,
+                                          igraph_bool_t normalized);
 IGRAPH_EXPORT igraph_error_t igraph_edge_betweenness_cutoff(const igraph_t *graph, igraph_vector_t *result,
                                                  igraph_bool_t directed,
-                                                 const igraph_vector_t *weights, igraph_real_t cutoff);
+                                                 const igraph_vector_t *weights,
+                                                 igraph_real_t cutoff,igraph_bool_t normalized);
 IGRAPH_EXPORT int igraph_betweenness_subset(const igraph_t *graph, igraph_vector_t *res,
                                             const igraph_vs_t vids, igraph_bool_t directed,
                                             const igraph_vs_t sources, const igraph_vs_t targets,
-                                            const igraph_vector_t *weights);
+                                            const igraph_vector_t *weights,
+                                            igraph_bool_t normalized);
 IGRAPH_EXPORT int igraph_edge_betweenness_subset(const igraph_t *graph, igraph_vector_t *res,
                                             const igraph_es_t eids, igraph_bool_t directed,
                                             const igraph_vs_t sources, const igraph_vs_t targets,
-                                            const igraph_vector_t *weights);
+                                            const igraph_vector_t *weights,
+                                            igraph_bool_t normalized);
 
 /**
  * \typedef igraph_pagerank_algo_t
