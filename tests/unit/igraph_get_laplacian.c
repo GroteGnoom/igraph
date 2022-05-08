@@ -21,23 +21,108 @@
 #include "test_utilities.h"
 
 void test_laplacian(igraph_t *g, const igraph_vector_t *w, igraph_bool_t dir, igraph_laplacian_normalization_t normalization) {
-    igraph_matrix_t m, m_converted_sparse;
+    igraph_t g_copy;
+    igraph_matrix_t m, m_converted_sparse, m_converted_directed;
     igraph_sparsemat_t m_sparse;
 
     igraph_matrix_init(&m, 0, 0);
     igraph_matrix_init(&m_converted_sparse, 0, 0);
+    igraph_matrix_init(&m_converted_directed, 0, 0);
     igraph_sparsemat_init(&m_sparse, 0, 0, 0);
 
     igraph_get_laplacian(g, &m, IGRAPH_OUT, normalization, w);
     igraph_get_laplacian_sparse(g, &m_sparse, IGRAPH_OUT, normalization, w);
-    igraph_matrix_print(&m);
+    igraph_matrix_printf(&m, "%9g");
     igraph_sparsemat_as_matrix(&m_converted_sparse, &m_sparse);
     IGRAPH_ASSERT(igraph_matrix_all_e(&m, &m_converted_sparse));
+    if (!dir && !w) {
+        igraph_copy(&g_copy, g);
+        igraph_to_directed(&g_copy, IGRAPH_TO_DIRECTED_MUTUAL);
+        igraph_get_laplacian(&g_copy, &m_converted_directed, IGRAPH_OUT, normalization, w);
+        IGRAPH_ASSERT(igraph_matrix_all_e(&m, &m_converted_directed));
+        igraph_destroy(&g_copy);
+    }
+    /*
+    if (normalization == 0) {
+        int nrow = igraph_matrix_nrow(&m);
+        int ncol = igraph_matrix_ncol(&m);
+        igraph_matrix_t W, D, L, Ll;
+        igraph_matrix_init(&W, nrow, ncol);
+        igraph_matrix_init(&D, nrow, ncol);
+        igraph_matrix_init(&L, nrow, ncol);
+        igraph_matrix_init(&Ll, nrow, ncol);
+        for (int i = 0; i < nrow; i++) {
+            for (int j = 0; j < ncol; j++) {
+                for (int e = 0; e < igraph_ecount(g); e++) {
+                    if (IGRAPH_FROM(g, e) == i && IGRAPH_TO(g, e) == j) {
+                        if (w) {
+                            MATRIX(W, i, j) += VECTOR(*w)[e];
+                            MATRIX(D, i, i) += VECTOR(*w)[e];
+                        } else {
+                            MATRIX(W, i, j) ++;
+                            MATRIX(D, i, i) ++;
+                        }
+                        if (!dir && i != j) {
+                            if (w) {
+                                MATRIX(W, j, i) += VECTOR(*w)[e];
+                                MATRIX(D, j, j) += VECTOR(*w)[e];
+                            } else {
+                                MATRIX(W, j, i) ++;
+                                MATRIX(D, j, j) ++;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        for (int i = 0; i < nrow; i++) {
+            for (int j = 0; j < ncol; j++) {
+                MATRIX(L, i, j) = MATRIX(D, i, j) - MATRIX(W, i, j);
+            }
+        }
+        for (int i = 0; i < nrow; i++) {
+            for (int j = 0; j < ncol; j++) {
+                if (i == j)
+                    MATRIX(Ll, i, j)++;
+                MATRIX(Ll, i, j) -= MATRIX(W, i, j) / MATRIX(D, i, i);
+            }
+        }
+        printf("W:\n");
+        igraph_matrix_printf(&W, "%9g");
+        printf("D:\n");
+        igraph_matrix_printf(&D, "%9g");
+        printf("L:\n");
+        igraph_matrix_printf(&L, "%9g");
+        printf("Ll:\n");
+        igraph_matrix_printf(&Ll, "%9g");
+        igraph_matrix_destroy(&W);
+        igraph_matrix_destroy(&D);
+        igraph_matrix_destroy(&L);
+        igraph_matrix_destroy(&Ll);
+    }
+    */
 
     igraph_matrix_destroy(&m);
     igraph_matrix_destroy(&m_converted_sparse);
+    igraph_matrix_destroy(&m_converted_directed);
     igraph_sparsemat_destroy(&m_sparse);
 }
+/*
+=== normalization: left, unweighted, undirected
+        1      -0.2         0         0 -0.333333         0
+     -0.2       0.6      -0.4         0         0         0
+        0      -0.4       0.6 -0.333333         0         0
+        0         0 -0.333333         1 -0.666667         0
+-0.333333         0         0 -0.666667         1         0
+        0         0         0         0         0         0
+=== normalization: left, unweighted, directed
+        1        -1         0         0         0         0
+        0  0.666667 -0.666667         0         0         0
+        0         0       0.5      -0.5         0         0
+        0         0         0         1        -1         0
+       -1         0         0         0         1         0
+        0         0         0         0         0         0
+        */
 
 int main() {
     igraph_t g_un, g_dir;
@@ -51,7 +136,7 @@ int main() {
     for (int normalization = 0; normalization < 4; normalization++) {
         for (int weighted = 0; weighted < 2; weighted++) {
             for (int directed = 0; directed < 2; directed++) {
-                printf("=== normalization: %s, %sweighted, %sdirected\n",
+                printf("\n=== normalization: %s, %sweighted, %sdirected\n",
                         n[normalization],
                         (weighted ? "" : "un"),
                         (directed ? "" : "un")
