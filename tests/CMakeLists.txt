@@ -959,6 +959,7 @@ add_benchmarks(
   igraph_transitivity
   igraph_voronoi
   inc_vs_adj
+  local_scan  
 )
 
 # dot product

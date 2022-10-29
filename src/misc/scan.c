@@ -606,8 +606,12 @@ igraph_error_t igraph_local_scan_k_ecount(const igraph_t *graph, igraph_integer_
     if (k == 0) {
         return igraph_local_scan_0(graph, res, weights, mode);
     }
-    if (k == 1 && igraph_is_directed(graph)) {
-        return igraph_local_scan_1_ecount(graph, res, weights, mode);
+    if (k == 1) {
+        if (igraph_is_directed(graph)) {
+            return igraph_local_scan_1_ecount(graph, res, weights, mode);
+        } else if (weights) {
+            return igraph_i_local_scan_1_sumweights(graph, res, weights);
+        }
     }
 
     /* We do a BFS form each node, and simply count the number
