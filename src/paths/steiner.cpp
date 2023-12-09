@@ -194,7 +194,8 @@ igraph_error_t igraph_steiner_dreyfus_wagner(
     }
 
     if (igraph_vector_size(pweights) != no_of_edges) {
-
+        printf("%lld\n", igraph_vector_size(pweights));
+        printf("%lld\n", no_of_edges);
         IGRAPH_ERROR("Invalid weight vector length.", IGRAPH_EINVAL);
     }
     if (no_of_edges > 0) {

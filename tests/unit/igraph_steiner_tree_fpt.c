@@ -18,8 +18,115 @@
 
 #include <igraph.h>
 #include "test_utilities.h"
+#include <limits.h>
 
-void check_graph(const igraph_t *graph, const igraph_vector_int_t *terminals, const igraph_vector_t *weights) {
+int is_tree(igraph_t *graph, igraph_vector_int_t *tree_edges) {
+    igraph_t tree;
+    igraph_subgraph_from_edges(graph, &tree, igraph_ess_vector(tree_edges), /* delete_vertices= */ true);
+    igraph_bool_t res;
+    igraph_is_tree(&tree, &res, NULL, IGRAPH_ALL);
+    igraph_destroy(&tree);
+    return res;
+}
+
+int reaches_terminals(igraph_t *graph, igraph_vector_int_t *terminals, igraph_vector_int_t *tree_edges) {
+    for (int t = 0; t < igraph_vector_int_size(terminals); t++) {
+        int terminal = VECTOR(*terminals)[t];
+        int found = 0;
+        for (int e = 0; e < igraph_vector_int_size(tree_edges); e ++) {
+            igraph_integer_t edge = VECTOR(*tree_edges)[e];
+            if (IGRAPH_FROM(graph, edge) == terminal || IGRAPH_TO(graph, edge) == terminal) {
+                found = 1;
+                break;
+            }
+        }
+        if (!found) {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+igraph_real_t get_tree_weight(igraph_vector_int_t *tree_edges, igraph_vector_t *weights) {
+
+    igraph_real_t value = 0.0;
+    igraph_integer_t tree_size = igraph_vector_int_size(tree_edges);
+    for (igraph_integer_t i = 0; i < tree_size; i++) {
+		if (weights)
+			value += VECTOR(*weights)[VECTOR(*tree_edges)[i]];
+		else
+			value += 1;
+    }
+    return value;
+}
+
+int backtrack(igraph_t *graph, igraph_vector_int_t *terminals, igraph_vector_t *weights, igraph_vector_int_t *tree_edges, igraph_integer_t edge, igraph_real_t max, igraph_bool_t better) {
+    igraph_real_t tree_weight = get_tree_weight(tree_edges, weights);
+    if (better && tree_weight >= max) {
+        return 0;
+    }
+    if (tree_weight > max) {
+        return 0;
+    }
+    if (reaches_terminals(graph, terminals, tree_edges) &&
+        is_tree(graph, tree_edges)) {
+        return 1;
+    }
+    if (edge >= igraph_ecount(graph)) {
+        return 0;
+    }
+
+    igraph_vector_int_t tree_edges_cp;
+    igraph_vector_int_init_copy(&tree_edges_cp, tree_edges);
+
+    if (backtrack(graph, terminals, weights, tree_edges, edge+1, max, better)) {
+        igraph_vector_int_destroy(&tree_edges_cp);
+        return 1;
+    }
+
+    igraph_vector_int_destroy(tree_edges);
+    igraph_vector_int_init_copy(tree_edges, &tree_edges_cp);
+    igraph_vector_int_destroy(&tree_edges_cp);
+
+    igraph_vector_int_push_back(tree_edges, edge);
+    if (backtrack(graph, terminals, weights, tree_edges, edge+1, max, better)) {
+        return 1;
+    }
+    return 0;
+}
+
+void compare_brute_force(igraph_t *graph, igraph_vector_int_t *terminals, igraph_vector_t *weights, igraph_real_t tree_weight) {
+    if (igraph_ecount(graph) == 0) {
+        return;
+    }
+    igraph_vector_int_t tree_edges;
+
+    igraph_vector_int_init(&tree_edges, 0);
+
+    int found_equal = backtrack(graph, terminals, weights, &tree_edges, 0, tree_weight, 0);
+    if (!found_equal) {
+        printf("tree not equal, this is the backtracked tree:\n");
+        igraph_vector_int_print(&tree_edges);
+        exit(1);
+    }
+    igraph_vector_int_clear(&tree_edges);
+
+    int found_better = backtrack(graph, terminals, weights, &tree_edges, 0, tree_weight, 1);
+    if (found_better) {
+        printf("tree found better:\n");
+        igraph_vector_int_print(&tree_edges);
+        igraph_real_t value = get_tree_weight(&tree_edges, weights);
+        printf("value: %f\n", value);
+        exit(1);
+    }
+    igraph_vector_int_destroy(&tree_edges);
+}
+
+void check_graph(igraph_t *graph, igraph_vector_int_t *terminals, igraph_vector_t *weights) {
+
+    if (igraph_vector_int_size(terminals) < 2) {
+        return;
+    }
     igraph_real_t value;
     igraph_vector_int_t tree_edges;
 
@@ -28,6 +135,11 @@ void check_graph(const igraph_t *graph, const igraph_vector_int_t *terminals, co
     igraph_error_t x = igraph_steiner_dreyfus_wagner(graph, terminals, weights, &value, &tree_edges);
     IGRAPH_ASSERT(x == IGRAPH_SUCCESS);
 
+    printf("value: %f, dreyfus wagner tree edges:\n", value);
+    igraph_vector_int_print(&tree_edges);
+	compare_brute_force(graph, terminals, weights, value);
+    IGRAPH_ASSERT(reaches_terminals(graph, terminals, &tree_edges));
+
     print_vector_int(&tree_edges);
     printf("Total Steiner tree weight: %g\n", value);
 
@@ -35,7 +147,10 @@ void check_graph(const igraph_t *graph, const igraph_vector_int_t *terminals, co
     igraph_real_t value2 = 0.0;
     igraph_integer_t tree_size = igraph_vector_int_size(&tree_edges);
     for (igraph_integer_t i = 0; i < tree_size; i++) {
-        value2 += VECTOR(*weights)[VECTOR(tree_edges)[i]];
+		if (weights)
+			value2 += VECTOR(*weights)[VECTOR(tree_edges)[i]];
+		else
+			value2 ++;
     }
     IGRAPH_ASSERT(value == value2);
 
@@ -52,6 +167,74 @@ void check_graph(const igraph_t *graph, const igraph_vector_int_t *terminals, co
     }
 
     igraph_vector_int_destroy(&tree_edges);
+}
+
+void try_random(void) {
+    printf("begin try_random!\n");
+    /*
+    igraph_t g;
+    int size = rand() % 9 + 2;
+    igraph_empty(&g, size, 0);
+    igraph_vector_int_t edges;
+    igraph_vector_int_t terminals;
+    igraph_vector_t weights;
+    igraph_vector_int_init(&edges, 0);
+    igraph_vector_int_init(&terminals, 0);
+    igraph_vector_init(&weights, 0);
+    for (int i = 0; i < (rand() % (size * (size - 1))); i ++) {
+        int start = rand() % size;
+        int end = rand() % size;
+        igraph_vector_int_push_back(&edges, start);
+        igraph_vector_int_push_back(&edges, rand() % size);
+        if (rand() % 5) {
+            bool duplicate = 0;
+            for (int j = 0; j < igraph_vector_int_size(&terminals); j++) {
+                if (VECTOR(terminals)[j] == start) {
+                    duplicate = 1;
+                    break;
+                }
+            }
+            if (!duplicate) {
+                igraph_vector_int_push_back(&terminals, start);
+            }
+        }
+        igraph_vector_push_back(&weights, (float)rand() / (float)INT_MAX);
+    }
+    igraph_add_edges(&g, &edges, NULL);
+    */
+    igraph_t g;
+    igraph_vector_t weights;
+    igraph_vector_int_t terminals;
+    igraph_vector_int_init(&terminals, 0);
+    igraph_vector_init(&weights, 0);
+
+    int size = rand() % 5 + 5;
+    //igraph_erdos_renyi_game_gnp(&g, size, 0.7, 1, 1);
+    igraph_k_regular_game(&g,
+                          size, 3,
+                          1, 1);
+    for (int i = 0; i < igraph_ecount(&g); i ++) {
+        igraph_vector_push_back(&weights, (float)rand() / (float)INT_MAX);
+    }
+    for (int i = 0; i < igraph_vcount(&g); i ++) {
+        if (rand() % 2 == 0) {
+            igraph_vector_int_push_back(&terminals, i);
+        }
+    }
+
+    printf("graph:\n");
+    print_graph(&g);
+    printf("weights:\n");
+    igraph_vector_print(&weights);
+    printf("terminals:\n");
+    igraph_vector_int_print(&terminals);
+    check_graph(&g, &terminals, &weights);
+}
+
+void my_random(void) {
+    for (int i = 0; i < 1000; i++) {
+        try_random();
+    }
 }
 
 int main(void) {
@@ -271,11 +454,12 @@ int main(void) {
 
     igraph_t g;
     igraph_vector_int_t terminals;
-    igraph_full(&g, 10, IGRAPH_UNDIRECTED, 0);
+    igraph_full(&g, 8, IGRAPH_UNDIRECTED, 0);
     printf("\nA graph with n-1 terminals:\n");
-    igraph_vector_int_init_int(&terminals, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8);
+    igraph_vector_int_init_int(&terminals, 6, 0, 1, 2, 3, 4, 5);
     igraph_vector_int_init(&tree_edges, 0);
     igraph_error_t x = igraph_steiner_dreyfus_wagner(&g, &terminals, NULL, &value, &tree_edges);
+    check_graph(&g, &terminals, NULL);
     IGRAPH_ASSERT(x == IGRAPH_SUCCESS);
     igraph_vector_int_print(&tree_edges);
     printf("value: %f\n", value);
@@ -288,6 +472,7 @@ int main(void) {
     printf("\nA graph with 1 terminal:\n");
     igraph_vector_int_init_int(&terminals_1, 1, 0);
     igraph_vector_int_init(&tree_edges, 0);
+    //check_graph(&g, &terminals_1, NULL);
     igraph_error_t x1 = igraph_steiner_dreyfus_wagner(&g, &terminals_1, NULL, &value, &tree_edges);
     IGRAPH_ASSERT(x1 == IGRAPH_SUCCESS);
     igraph_vector_int_print(&tree_edges);
@@ -303,6 +488,7 @@ int main(void) {
     igraph_vector_int_init_int(&terminals_2, 2, 1, 5);
     igraph_vector_int_init(&tree_edges, 0);
 
+    check_graph(&g, &terminals_2, NULL);
     igraph_error_t x2 = igraph_steiner_dreyfus_wagner(&g, &terminals_2, NULL, &value, &tree_edges);
     IGRAPH_ASSERT(x2 == IGRAPH_SUCCESS);
     igraph_vector_int_print(&tree_edges);
@@ -316,6 +502,7 @@ int main(void) {
     printf("\nA graph with 3 terminals:\n");
     igraph_vector_int_init_int(&terminals_3, 3, 1, 3, 5);
     igraph_vector_int_init(&tree_edges, 0);
+    check_graph(&g, &terminals_3, NULL);
     igraph_error_t x3 = igraph_steiner_dreyfus_wagner(&g, &terminals_3, NULL, &value, &tree_edges);
     IGRAPH_ASSERT(x3 == IGRAPH_SUCCESS);
     igraph_vector_int_print(&tree_edges);
@@ -337,6 +524,7 @@ int main(void) {
                  -1);
     igraph_vector_int_init_int(&terminals_new, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8);
     igraph_vector_int_init(&tree_edges_new, 0);
+    check_graph(&g_new, &terminals_new, NULL);
     igraph_steiner_dreyfus_wagner(&g_new, &terminals_new, NULL, &value_new, &tree_edges_new);
     printf("Tree edges:\n");
     igraph_vector_int_print(&tree_edges_new);
@@ -348,6 +536,7 @@ int main(void) {
     printf("\nA graph with 8 terminals:\n");
     igraph_vector_int_init_int(&terminals_new, 8, 0, 2, 3, 4, 5, 6, 7, 8);
     igraph_vector_int_init(&tree_edges_new, 0);
+    check_graph(&g_new, &terminals_new, NULL);
     igraph_steiner_dreyfus_wagner(&g_new, &terminals_new, NULL, &value_new, &tree_edges_new);
     printf("Tree edges:\n");
     igraph_vector_int_print(&tree_edges_new);
@@ -359,6 +548,7 @@ int main(void) {
     printf("\nA graph with 7 terminals and 2 removed to test if it forces it to go through:\n");
     igraph_vector_int_init_int(&terminals_new, 7, 0, 3, 4, 5, 6, 7, 8);
     igraph_vector_int_init(&tree_edges_new, 0);
+    check_graph(&g_new, &terminals_new, NULL);
     igraph_steiner_dreyfus_wagner(&g_new, &terminals_new, NULL, &value_new, &tree_edges_new);
     printf("Tree edges:\n");
     igraph_vector_int_print(&tree_edges_new);
@@ -380,6 +570,7 @@ int main(void) {
                 );
     igraph_vector_int_init_int(&terminals_new, 7, 0, 1, 2, 3, 4, 5, 7);
     igraph_vector_int_init(&tree_edges_new, 0);
+    check_graph(&g_new, &terminals_new, NULL);
     igraph_steiner_dreyfus_wagner(&g_new_1, &terminals_new, NULL, &value_new_1, &tree_edges_new);
     printf("Tree edges:\n");
     igraph_vector_int_print(&tree_edges_new);
@@ -401,6 +592,7 @@ int main(void) {
                 );
     igraph_vector_int_init_int(&terminals_new, 4, 0, 3, 4, 5);
     igraph_vector_int_init(&tree_edges_new, 0);
+    check_graph(&g_new, &terminals_new, NULL);
     igraph_steiner_dreyfus_wagner(&g_new_2, &terminals_new, NULL, &value_new_2, &tree_edges_new);
     printf("Tree edges:\n");
     igraph_vector_int_print(&tree_edges_new);
@@ -424,6 +616,7 @@ int main(void) {
                  -1);
     igraph_vector_int_init_int_end(&terminals_new, -1, 0, 4, 2, 8, -1);
     igraph_vector_int_init(&tree_edges_new, 0);
+    check_graph(&g_new, &terminals_new, NULL);
     igraph_steiner_dreyfus_wagner(&g_new_3, &terminals_new, &weights, &value_new, &tree_edges_new);
     printf("Tree edges:\n");
     igraph_vector_int_print(&tree_edges_new);
@@ -464,6 +657,8 @@ int main(void) {
     
     igraph_vector_int_destroy(&terminals_new);
     
+
+    my_random();
 
     VERIFY_FINALLY_STACK();
 
